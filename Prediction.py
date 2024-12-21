@@ -1,6 +1,11 @@
 import CoolProp.CoolProp as CP  # Thermodynamic Tables
 import numpy as np
 import pandas as pd
+from sklearn import linear_model, preprocessing
+from sklearn.model_selection import train_test_split
+import matplotlib
+import matplotlib.pyplot as plt
+
 
 # Function to generate steam table data for a range of pressures and temperatures
 def data_generation(pressures, temperatures):
@@ -46,5 +51,3 @@ df = pd.DataFrame(data, columns=columns)
 output_file = 'steam_table_pressure_temperature.csv'
 df.to_csv(output_file, index=False)
 
-# Display the DataFrame
-print(df)
