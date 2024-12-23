@@ -6,7 +6,12 @@ from sklearn.model_selection import train_test_split
 from sklearn.multioutput import MultiOutputRegressor
 from sklearn.ensemble import RandomForestRegressor  # Using Random Forest for regression
 import matplotlib.pyplot as plt
+from sklearn.metrics import mean_squared_error
 
+
+pressures = np.linspace(0.01, 1000, 50)
+temperatures = np.linspace(0.1, 800, 100) 
+    
 # Function to generate steam table data for a range of pressures and temperatures
 def data_generation(pressures, temperatures):
     data = []
@@ -40,13 +45,8 @@ if os.path.exists(output_file):
     print(f"Data loaded from existing file: {output_file}")
 else:
     # If the file does not exist, generate the data
-    pressures = np.linspace(0.01, 22.064, 50)  # Pressures from 0.01 MPa to critical pressure of water
-    temperatures = np.linspace(0.1, 374, 100)  # Temperatures from 0 °C to critical temperature of water
-
-    # Generate data
     data = data_generation(pressures, temperatures)
 
-    # Convert data to a Pandas DataFrame
     columns = ['Pressure (MPa)', 'Temperature (°C)', 'Specific Volume (m³/kg)', 
                'Enthalpy (kJ/kg)', 'Entropy (kJ/kg·K)', 'Internal Energy (kJ/kg)', 
                'Viscosity (μPa·s)', 'Thermal Conductivity (mW/m·K)', 
@@ -54,9 +54,12 @@ else:
 
     df = pd.DataFrame(data, columns=columns)
 
+    # Remove redundant rows
+    df = df.drop_duplicates(subset=['Pressure (MPa)', 'Temperature (°C)'])
+    
     # Save the data to a CSV file
     df.to_csv(output_file, index=False)
-    print(f"Data generated and saved to file: {output_file}")
+    print(f"Data generated, deduplicated, and saved to file: {output_file}")
 
 # Define the features (X) and target variables (y)
 X = df[['Pressure (MPa)', 'Temperature (°C)']].values  # Features: Pressure and Temperature
@@ -71,6 +74,7 @@ print(f"Xts shape: {Xts.shape}")
 print(f"ytr shape: {ytr.shape}")
 print(f"yts shape: {yts.shape}")
 
+
 # Train a multi-output regression model
 model = MultiOutputRegressor(RandomForestRegressor(random_state=3))
 model.fit(Xtr, ytr)
@@ -78,20 +82,28 @@ model.fit(Xtr, ytr)
 # Predict on the test set
 ypred = model.predict(Xts)
 
-# Evaluate the model
-from sklearn.metrics import mean_squared_error
-
 mse = mean_squared_error(yts, ypred, multioutput='raw_values')
 print("Mean Squared Error for each target variable:", mse)
 
+
+
 # Plot viscosity vs. temperature at different pressures
-def plot_viscosity_vs_temperature(df, pressures_to_plot):
+def plot_viscosity_vs_temperature(df, pressures_to_plot, round_precision=2):
+    # Round the Pressure column to the desired precision
+    df['Rounded Pressure (MPa)'] = df['Pressure (MPa)'].round(round_precision)
+    
     plt.figure(figsize=(10, 6))
     for pressure in pressures_to_plot:
-        data_at_pressure = df[df['Pressure (MPa)'] == pressure]
-        plt.plot(data_at_pressure['Temperature (°C)'], 
-                 data_at_pressure['Viscosity (μPa·s)'], 
-                 label=f'{pressure} MPa')
+        # Round the pressure to match the dataset's precision
+        rounded_pressure = round(pressure, round_precision)
+        data_at_pressure = df[df['Rounded Pressure (MPa)'] == rounded_pressure]
+        
+        if not data_at_pressure.empty:  # Check if the filtered data is not empty
+            plt.plot(data_at_pressure['Temperature (°C)'], 
+                     data_at_pressure['Viscosity (μPa·s)'], 
+                     label=f'{pressure} MPa')
+        else:
+            print(f"No data found for Pressure = {pressure} MPa")
     
     plt.xlabel('Temperature (°C)')
     plt.ylabel('Viscosity (μPa·s)')
@@ -100,9 +112,9 @@ def plot_viscosity_vs_temperature(df, pressures_to_plot):
     plt.grid(True)
     plt.show()
 
-# Define pressures to plot
-pressures_to_plot = [0.1, 1, 5, 10, 20]  # Example pressures in MPa
-plot_viscosity_vs_temperature(df, pressures_to_plot)
+
+selected_pressures = pressures[::5]  # Select every 5th value (50 / 10 = 5)
+plot_viscosity_vs_temperature(df, selected_pressures)
 
 def plot_viscosity_comparison(Xts, yts, ypred):
     temperatures = Xts[:, 1]  # Extract temperatures from test features
@@ -110,8 +122,8 @@ def plot_viscosity_comparison(Xts, yts, ypred):
     predicted_viscosity = ypred[:, 5]  # Predicted viscosity is also in the 6th column
 
     plt.figure(figsize=(10, 6))
-    plt.scatter(temperatures, actual_viscosity, color='blue', label='Actual Viscosity', alpha=0.6)
-    plt.scatter(temperatures, predicted_viscosity, color='red', label='Predicted Viscosity', alpha=0.6)
+    plt.scatter(temperatures, actual_viscosity, color='blue', label='Actual Viscosity', alpha=0.5, s=10)
+    plt.scatter(temperatures, predicted_viscosity, color='red', label='Predicted Viscosity', alpha=0.5, s=10)
     plt.xlabel('Temperature (°C)')
     plt.ylabel('Viscosity (μPa·s)')
     plt.title('Actual vs Predicted Viscosity vs Temperature')
@@ -121,3 +133,83 @@ def plot_viscosity_comparison(Xts, yts, ypred):
 
 # Call the function to plot
 plot_viscosity_comparison(Xts, yts, ypred)
+
+def plot_viscosity_comparison_at_pressure(Xts, yts, ypred, pressure):
+    # Filter the test data for the specified pressure
+    indices_at_pressure = np.isclose(Xts[:, 0], pressure, atol=0.01)  # Check pressure in the first column of Xts
+    temperatures = Xts[indices_at_pressure, 1]  # Extract temperatures for the filtered rows
+    actual_viscosity = yts[indices_at_pressure, 5]  # Actual viscosity for the filtered rows
+    predicted_viscosity = ypred[indices_at_pressure, 5]  # Predicted viscosity for the filtered rows
+
+    if len(temperatures) > 0:  # Ensure there are data points to plot
+        plt.figure(figsize=(10, 6))
+        plt.scatter(temperatures, actual_viscosity, color='blue', label='Actual Viscosity', alpha=0.5, s=10, marker='o')
+        plt.scatter(temperatures, predicted_viscosity, color='red', label='Predicted Viscosity', alpha=0.5, s=10, marker='x')
+        plt.xlabel('Temperature (°C)')
+        plt.ylabel('Viscosity (μPa·s)')
+        plt.title(f'Actual vs Predicted Viscosity at Pressure = {pressure} MPa')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+    else:
+        print(f"No test data found for Pressure = {pressure} MPa")
+        
+# Example: Compare actual and predicted viscosity for a specific pressure in the test set
+plot_viscosity_comparison_at_pressure(Xts, yts, ypred, pressure=979.5920408163265)
+
+
+def plot_targets_comparison_at_pressure(Xts, yts, ypred, pressure, target_labels):
+    """
+    Plots all targeted values (e.g., Specific Volume, Enthalpy, etc.) at a specific pressure.
+
+    Parameters:
+    Xts: array-like
+        Test set features.
+    yts: array-like
+        Actual target values in the test set.
+    ypred: array-like
+        Predicted target values in the test set.
+    pressure: float
+        The specific pressure at which to filter the data.
+    target_labels: list
+        List of target column names for labeling the plots.
+    """
+    # Filter the test data for the specified pressure
+    indices_at_pressure = np.isclose(Xts[:, 0], pressure, atol=0.01)  # Check pressure in the first column of Xts
+    temperatures = Xts[indices_at_pressure, 1]  # Extract temperatures for the filtered rows
+
+    if len(temperatures) > 0:  # Ensure there are data points to plot
+        num_targets = yts.shape[1]  # Number of target columns
+        plt.figure(figsize=(12, 8))
+
+        for i in range(num_targets):
+            actual_values = yts[indices_at_pressure, i]  # Actual values for the current target
+            predicted_values = ypred[indices_at_pressure, i]  # Predicted values for the current target
+
+            # Plot actual and predicted values for the current target
+            plt.subplot((num_targets + 1) // 2, 2, i + 1)  # Create subplots in a grid format
+            plt.scatter(temperatures, actual_values, color='blue', label='Actual', alpha=0.7, s=10, marker='o')
+            plt.scatter(temperatures, predicted_values, color='red', label='Predicted', alpha=0.7, s=10, marker='x')
+            plt.title(f'{target_labels[i]}')
+            plt.xlabel('Temperature (°C)')
+            plt.ylabel(target_labels[i])
+            plt.legend()
+            plt.grid(True)
+
+        plt.tight_layout()  # Adjust layout for better visualization
+        plt.suptitle(f'Actual vs Predicted Values at Pressure = {pressure} MPa', y=1.02, fontsize=16)
+        plt.show()
+    else:
+        print(f"No test data found for Pressure = {pressure} MPa")
+        
+        
+    # Define the target labels (matching the column order in yts)
+target_labels = [
+    'Specific Volume (m³/kg)', 'Enthalpy (kJ/kg)', 'Entropy (kJ/kg·K)', 
+    'Internal Energy (kJ/kg)', 'Viscosity (μPa·s)', 'Thermal Conductivity (mW/m·K)', 
+    'Density (kg/m³)', 'Prandtl Number (dimensionless)'
+]
+
+
+# Call the function to plot all targets for a specific pressure
+plot_targets_comparison_at_pressure(Xts, yts, ypred, pressure=979.5920408163265, target_labels=target_labels)
