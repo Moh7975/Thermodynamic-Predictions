@@ -1,0 +1,10 @@
+Target Variable,Linear Regression,Lasso Regression,Polynomial Regression (Degree=2),Support Vector Regression,Gradient Boosting,Random Forest,XGBoost,K-Nearest Neighbors,Neural Network Regression
+Specific Volume (m³/kg),1.2982e-03,1.2949e-03,1.1001e-03,4.4034e-03,5.2281e-07,6.2570e-06,8.9649e-05,1.5763e-04,4.7696e-03
+Enthalpy (kJ/kg),4.5582e+04,4.5582e+04,2.2357e+04,3.2031e+05,4.9181e+03,3.1991e+03,2.7101e+03,3.5049e+03,1.3932e+04
+Entropy (kJ/kg·K),2.8013e-01,2.8011e-01,1.2223e-01,1.2109e-01,1.4124e-02,8.4141e-03,3.4630e-02,1.8944e-02,1.2828e-01
+Internal Energy (kJ/kg),3.8522e+04,3.8522e+04,1.6481e+04,2.2863e+05,2.5329e+03,3.2831e+03,1.8804e+03,2.8913e+03,1.2256e+04
+Viscosity (μPa·s),1.1597e+05,1.1597e+05,3.7225e+04,1.5275e+05,1.9952e+02,1.4422e+02,1.6456e+02,6.3660e+03,9.3877e+02
+Thermal Conductivity (mW/m·K),1.6237e+04,1.6237e+04,2.0857e+03,9.4737e+03,8.0673e+02,8.7781e+01,5.6562e+02,3.7497e+02,1.3139e+03
+Density (kg/m³),1.2611e+04,1.2611e+04,4.1695e+03,1.4267e+04,6.8771e+02,4.5428e+02,9.5219e+02,6.6103e+02,1.9963e+03
+Prandtl Number (dimensionless),2.8571e+06,2.8571e+06,9.2796e+05,4.0831e+06,7.3490e+03,3.9766e+03,2.9982e+03,1.4639e+05,2.8275e+04
+Average MSE,3.8575e+05,3.8575e+05,1.2628e+05,6.0106e+05,2.0617e+03,1.3931e+03,1.1589e+03,2.0024e+04,7.3390e+03
